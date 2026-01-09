@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "EduVip",
+  "version": "1.0.0",
+  "description": "Auto fill all star ratings in MUI grading dialog and click Grade.",
+  "action": {
+    "default_title": "Auto Grade"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://your-grading-site.com/*"
+  ],
+  "commands": {
+    "auto-grade": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+9"
+      },
+      "description": "Auto fill all star ratings and click Grade"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://your-grading-site.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
