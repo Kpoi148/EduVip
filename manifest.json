@@ -5,10 +5,11 @@
   "description": "Auto fill all star ratings in MUI grading dialog and click Grade.",
   "action": {
     "default_title": "EduVip Tools",
-    "default_popup": "popup.html"
+    "default_popup": "src/popup/index.html"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/index.js",
+    "type": "module"
   },
   "permissions": [
     "activeTab",
@@ -32,7 +33,13 @@
         "https://your-grading-site.com/*"
       ],
       "js": [
-        "content.js"
+        "src/content/constants.js",
+        "src/content/dom.js",
+        "src/content/rating.js",
+        "src/content/comment.js",
+        "src/content/ai.js",
+        "src/content/handlers.js",
+        "src/content/index.js"
       ],
       "run_at": "document_idle"
     }

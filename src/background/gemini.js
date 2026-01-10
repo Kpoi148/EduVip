@@ -1,15 +1,14 @@
-const DEFAULT_RATING = 5;
-const STORAGE_KEY = "eduvip_settings";
-const GEMINI_FALLBACK_MODELS = [
-  "gemini-1.5-pro",
-  "gemini-1.5-flash",
-  "gemini-1.0-pro",
-  "gemini-pro"
-];
-const GEMINI_BASE_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/";
+import {
+  GEMINI_BASE_URL,
+  GEMINI_DEFAULT_MODEL,
+  GEMINI_FALLBACK_MODELS,
+  GEMINI_MAX_OUTPUT_TOKENS,
+  GEMINI_REQUEST_TIMEOUT_MS,
+  GEMINI_TEMPERATURE
+} from "./constants.js";
+import { getStoredGeminiSettings, savePreferredModel } from "./storage.js";
 
-function buildGeminiRequest(prompt, input) {
+function buildGeminiRequest(prompt, input, generationConfig) {
   const body = {
     contents: [
       {
@@ -23,6 +22,10 @@ function buildGeminiRequest(prompt, input) {
     body.systemInstruction = {
       parts: [{ text: prompt.trim() }]
     };
+  }
+
+  if (generationConfig && Object.keys(generationConfig).length > 0) {
+    body.generationConfig = generationConfig;
   }
 
   return body;
@@ -74,6 +77,9 @@ function buildModelList(requestedModel) {
       list.push(model);
     }
   });
+  if (!list.includes(GEMINI_DEFAULT_MODEL)) {
+    list.unshift(GEMINI_DEFAULT_MODEL);
+  }
   return list;
 }
 
@@ -121,12 +127,31 @@ async function listGeminiModels(apiKey) {
   return { ok: true, status: response.status, models: supported };
 }
 
-async function callGemini(url, body) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
+async function callGemini(url, body, timeoutMs) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error?.name === "AbortError") {
+      return {
+        ok: false,
+        status: 408,
+        error: "Request timed out"
+      };
+    }
+    throw error;
+  }
+  clearTimeout(timeoutId);
 
   let responseText = "";
   let payload = null;
@@ -150,30 +175,31 @@ async function callGemini(url, body) {
   return { ok: true, status: response.status, payload, responseText };
 }
 
-function getStoredGeminiSettings(callback) {
-  chrome.storage.local.get(
-    [STORAGE_KEY, "geminiApiKey", "customPrompt", "systemPrompt"],
-    (data) => {
-      const settings = data[STORAGE_KEY] || {};
-      const geminiApiKey = (
-        settings.geminiApiKey ||
-        data.geminiApiKey ||
-        ""
-      ).trim();
-      const customPrompt = (
-        settings.customPrompt ||
-        settings.systemPrompt ||
-        data.customPrompt ||
-        data.systemPrompt ||
-        ""
-      ).trim();
+function buildGenerationConfig(msg) {
+  const config = {};
+  const maxOutputTokens = Number.parseInt(msg?.maxOutputTokens, 10);
+  if (Number.isFinite(maxOutputTokens) && maxOutputTokens > 0) {
+    config.maxOutputTokens = maxOutputTokens;
+  } else {
+    config.maxOutputTokens = GEMINI_MAX_OUTPUT_TOKENS;
+  }
 
-      callback({ geminiApiKey, customPrompt });
-    }
-  );
+  const temperature = Number(msg?.temperature);
+  if (!Number.isNaN(temperature)) {
+    config.temperature = temperature;
+  } else {
+    config.temperature = GEMINI_TEMPERATURE;
+  }
+
+  const topP = Number(msg?.topP);
+  if (!Number.isNaN(topP)) {
+    config.topP = topP;
+  }
+
+  return config;
 }
 
-function handleAiGenerate(msg, sendResponse) {
+export function handleAiGenerate(msg, sendResponse) {
   const input = (msg?.input || msg?.text || msg?.question || "")
     .toString()
     .trim();
@@ -182,17 +208,27 @@ function handleAiGenerate(msg, sendResponse) {
     return;
   }
 
-  getStoredGeminiSettings(({ geminiApiKey, customPrompt }) => {
+  getStoredGeminiSettings(({ geminiApiKey, customPrompt, preferredModel }) => {
     if (!geminiApiKey) {
       sendResponse({ status: "error", error: "Missing Gemini API key" });
       return;
     }
 
-    const requestedModel = (msg?.model || msg?.geminiModel || "")
+    const fastMode = msg?.mode === "fast" || msg?.fast === true;
+    const requestedModel = (
+      msg?.model ||
+      msg?.geminiModel ||
+      (fastMode ? GEMINI_DEFAULT_MODEL : preferredModel || GEMINI_DEFAULT_MODEL) ||
+      ""
+    )
       .toString()
       .trim();
     const models = buildModelList(requestedModel);
-    const body = buildGeminiRequest(customPrompt, input);
+    if (preferredModel && !models.includes(preferredModel)) {
+      models.push(preferredModel);
+    }
+    const generationConfig = buildGenerationConfig(msg);
+    const body = buildGeminiRequest(customPrompt, input, generationConfig);
 
     void (async () => {
       try {
@@ -203,7 +239,7 @@ function handleAiGenerate(msg, sendResponse) {
             buildGeminiEndpoint(model) +
             "?key=" +
             encodeURIComponent(geminiApiKey);
-          const result = await callGemini(url, body);
+          const result = await callGemini(url, body, GEMINI_REQUEST_TIMEOUT_MS);
           if (!result.ok) {
             lastError = { error: result.error, code: result.status, model };
             if (result.status === 401 || result.status === 403) {
@@ -234,6 +270,7 @@ function handleAiGenerate(msg, sendResponse) {
             return;
           }
 
+          savePreferredModel(model);
           sendResponse({ status: "ok", text, raw: result.payload, model });
           return;
         }
@@ -258,7 +295,11 @@ function handleAiGenerate(msg, sendResponse) {
               buildGeminiEndpoint(model) +
               "?key=" +
               encodeURIComponent(geminiApiKey);
-            const result = await callGemini(url, body);
+            const result = await callGemini(
+              url,
+              body,
+              GEMINI_REQUEST_TIMEOUT_MS
+            );
             if (!result.ok) {
               lastError = { error: result.error, code: result.status, model };
               if (result.status === 401 || result.status === 403) {
@@ -288,6 +329,7 @@ function handleAiGenerate(msg, sendResponse) {
               return;
             }
 
+            savePreferredModel(model);
             sendResponse({ status: "ok", text, raw: result.payload, model });
             return;
           }
@@ -321,104 +363,3 @@ function handleAiGenerate(msg, sendResponse) {
     })();
   });
 }
-
-function sendAutoAction(tabId, message, done) {
-  chrome.tabs.sendMessage(tabId, message, () => {
-    if (!chrome.runtime.lastError) {
-      if (done) {
-        done({ status: "ok" });
-      }
-      return;
-    }
-
-    // If content script isn't ready, inject it and retry.
-    chrome.scripting.executeScript(
-      {
-        target: { tabId },
-        files: ["content.js"]
-      },
-      () => {
-        chrome.tabs.sendMessage(tabId, message, () => {
-          if (done) {
-            if (chrome.runtime.lastError) {
-              done({
-                status: "error",
-                error: chrome.runtime.lastError.message
-              });
-              return;
-            }
-            done({ status: "ok" });
-          }
-        });
-      }
-    );
-  });
-}
-
-function sendAutoGrade(tabId, rating = DEFAULT_RATING) {
-  sendAutoAction(tabId, { type: "AUTO_GRADE", rating });
-}
-
-function sendAutoComment(tabId, comment) {
-  sendAutoAction(tabId, { type: "AUTO_COMMENT", comment });
-}
-
-chrome.action.onClicked.addListener((tab) => {
-  if (!tab?.id) {
-    return;
-  }
-  sendAutoGrade(tab.id);
-});
-
-chrome.commands.onCommand.addListener((command) => {
-  if (command !== "auto-grade") {
-    return;
-  }
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tab = tabs[0];
-    if (!tab?.id) {
-      return;
-    }
-    sendAutoGrade(tab.id);
-  });
-});
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg?.action === "AI_GENERATE" || msg?.type === "AI_GENERATE") {
-    handleAiGenerate(msg, sendResponse);
-    return true;
-  }
-  if (msg?.type !== "POPUP_ACTION") {
-    return;
-  }
-
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tab = tabs[0];
-    if (!tab?.id) {
-      sendResponse({ status: "error", error: "No active tab" });
-      return;
-    }
-
-    if (msg.action === "AUTO_GRADE") {
-      sendAutoAction(
-        tab.id,
-        { type: "AUTO_GRADE", rating: msg.rating ?? DEFAULT_RATING },
-        sendResponse
-      );
-      return;
-    }
-
-    if (msg.action === "AUTO_COMMENT") {
-      sendAutoAction(
-        tab.id,
-        { type: "AUTO_COMMENT", comment: msg.comment || "" },
-        sendResponse
-      );
-      return;
-    }
-
-    sendResponse({ status: "error", error: "Unknown action" });
-  });
-
-  return true;
-});
