@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EduVip Tools</title>
+    <link rel="stylesheet" href="popup.css" />
+    <script src="popup.js" defer></script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="title">EduVip Tools</header>
+
+      <section class="card">
+        <div class="card-title">Gemini Settings</div>
+        <label class="field">
+          <span>API Key</span>
+          <div class="field-row">
+            <input
+              id="gemini-key"
+              type="password"
+              placeholder="Paste Gemini API Key"
+              autocomplete="off"
+            />
+            <button id="toggle-key" class="ghost" type="button">Show</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>System Prompt</span>
+          <textarea
+            id="system-prompt"
+            rows="4"
+            placeholder="Type custom system prompt"
+          ></textarea>
+        </label>
+        <button id="btn-save" class="secondary">Save</button>
+      </section>
+
+      <section class="card">
+        <div class="card-title">Auto Grade</div>
+        <label class="field">
+          <span>Rating</span>
+          <select id="rating">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+        <button id="btn-grade" class="primary">Run Auto Grade</button>
+      </section>
+
+      <section class="card">
+        <div class="card-title">Auto Comment</div>
+        <label class="field">
+          <span>Comment</span>
+          <textarea id="comment" rows="3" placeholder="Type a comment"></textarea>
+        </label>
+        <button id="btn-comment" class="secondary">Run Auto Comment</button>
+      </section>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </div>
+  </body>
+</html>

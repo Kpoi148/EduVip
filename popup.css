@@ -1,0 +1,152 @@
+:root {
+  color-scheme: light;
+  --bg-1: #f7f2e7;
+  --bg-2: #f1ecff;
+  --card: rgba(255, 255, 255, 0.9);
+  --ink: #1f1b16;
+  --muted: #6b5f56;
+  --accent: #f27a54;
+  --accent-dark: #d85c39;
+  --shadow: 0 12px 28px rgba(36, 26, 16, 0.2);
+  --radius: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 460px;
+  font-family: "Trebuchet MS", "Gill Sans", "Verdana", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at top, var(--bg-2), var(--bg-1));
+  animation: float-in 240ms ease-out;
+}
+
+.app {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.title {
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+select,
+input,
+textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(55, 46, 38, 0.2);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 14px;
+  background: #fff;
+  color: var(--ink);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field-row input {
+  flex: 1;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+.primary {
+  background: linear-gradient(120deg, var(--accent), #f4b168);
+  color: #fff;
+  box-shadow: 0 8px 16px rgba(242, 122, 84, 0.3);
+}
+
+.secondary {
+  background: #fff0e8;
+  color: var(--accent-dark);
+  border: 1px solid rgba(216, 92, 57, 0.4);
+}
+
+.ghost {
+  background: #fff;
+  color: var(--accent-dark);
+  border: 1px solid rgba(216, 92, 57, 0.25);
+  padding: 8px 12px;
+}
+
+.status {
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.status.ok {
+  color: #2f7d4a;
+}
+
+.status.error {
+  color: #b53b2d;
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
