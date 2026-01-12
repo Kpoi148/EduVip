@@ -169,6 +169,11 @@ function fillCommentField(field, comment, force) {
     return false;
   }
 
+  // Note: We don't sanitize AI-generated comments because:
+  // 1. Gemini API responses are already safe
+  // 2. Sanitization can break formatting (line breaks, special chars)
+  // 3. For user input from popup, validation is done before sending
+
   if (isEditable) {
     setEditableValue(field, comment);
   } else {

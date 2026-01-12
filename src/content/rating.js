@@ -1,5 +1,6 @@
 let autoGradeTimer = null;
 let autoObserverStarted = false;
+let autoObserver = null; // Store observer reference for cleanup
 
 function findNearestRadioGroupContainer(radio, boundary) {
   let node = radio.parentElement;
@@ -197,6 +198,7 @@ function scheduleAutoGrade(rating = DEFAULT_RATING) {
   }
   autoGradeTimer = setTimeout(() => {
     autoGrade(rating);
+    autoGradeTimer = null;
   }, AUTO_GRADE_DEBOUNCE_MS);
 }
 
@@ -208,7 +210,7 @@ function startAutoDetect() {
 
   scheduleAutoGrade(DEFAULT_RATING);
 
-  const observer = new MutationObserver((mutations) => {
+  autoObserver = new MutationObserver((mutations) => {
     const hasAddedNodes = mutations.some(
       (mutation) => mutation.addedNodes && mutation.addedNodes.length > 0
     );
@@ -219,6 +221,20 @@ function startAutoDetect() {
 
   const root = document.documentElement || document.body;
   if (root) {
-    observer.observe(root, { childList: true, subtree: true });
+    autoObserver.observe(root, { childList: true, subtree: true });
   }
+}
+
+
+// Cleanup function
+function stopAutoDetect() {
+  if (autoGradeTimer) {
+    clearTimeout(autoGradeTimer);
+    autoGradeTimer = null;
+  }
+  if (autoObserver) {
+    autoObserver.disconnect();
+    autoObserver = null;
+  }
+  autoObserverStarted = false;
 }

@@ -17,7 +17,7 @@ export function setStatus(statusEl, message, type) {
       statusEl.textContent = "";
       statusEl.classList.remove("ok", "error");
       statusTimer = null;
-    }, 1800);
+    }, 3000); // Increased from 1800ms to 3000ms for better UX
   }
 }
 
@@ -34,4 +34,17 @@ export function bindPasswordToggle(keyEl, toggleBtn) {
     keyEl.type = "password";
     toggleBtn.textContent = "Show";
   });
+}
+
+export function toggleLoading(button, isLoading) {
+  if (!button) {
+    return;
+  }
+  if (isLoading) {
+    button.classList.add("loading");
+    button.disabled = true;
+  } else {
+    button.classList.remove("loading");
+    button.disabled = false;
+  }
 }

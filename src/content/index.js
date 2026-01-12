@@ -1,3 +1,7 @@
+// AbortController for cleanup
+const abortController = new AbortController();
+const { signal } = abortController;
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type === "AUTO_GRADE") {
     autoGrade(msg.rating || DEFAULT_RATING, { force: true });
@@ -10,7 +14,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true;
 });
 
-document.addEventListener("click", handleReplyClick, true);
-document.addEventListener("pointerdown", handleSendPointerDown, true);
+document.addEventListener("click", handleReplyClick, { capture: true, signal });
+document.addEventListener("pointerdown", handleSendPointerDown, { capture: true, signal });
 
 startAutoDetect();
+
+// Cleanup on page unload
+window.addEventListener("beforeunload", () => {
+  abortController.abort();
+  stopAutoDetect();
+}, { once: true });

@@ -48,34 +48,38 @@ async function autoCommentFromQuestion(options = {}) {
   }
   aiCommentInFlight = true;
 
-  const question = extractQuestionText();
-  if (!question) {
-    console.log("Không tìm thấy nội dung câu hỏi");
-    aiCommentInFlight = false;
-    return;
-  }
+  try {
+    const question = extractQuestionText();
+    if (!question) {
+      console.log("Không tìm thấy nội dung câu hỏi");
+      return;
+    }
 
-  const response = await requestAiGenerate(question);
-  if (!response || response.status !== "ok") {
-    console.log("AI generate failed:", response?.error || "Unknown error");
-    aiCommentInFlight = false;
-    return;
-  }
+    const response = await requestAiGenerate(question);
+    if (!response || response.status !== "ok") {
+      console.log("AI generate failed:", response?.error || "Unknown error");
+      return;
+    }
 
-  const comment = (response.text || "").trim();
-  if (!comment) {
-    console.log("AI trả về comment trống");
-    aiCommentInFlight = false;
-    return;
-  }
+    const comment = (response.text || "").trim();
+    if (!comment) {
+      console.log("AI trả về comment trống");
+      return;
+    }
 
-  const hasField = await waitForCommentField(root);
-  if (!hasField) {
-    console.log("Không tìm thấy ô comment để điền");
-    aiCommentInFlight = false;
-    return;
-  }
+    const hasField = await waitForCommentField(root);
+    if (!hasField) {
+      console.log("Không tìm thấy ô comment để điền");
+      return;
+    }
 
-  autoComment(comment, { force: true, autoSend, root });
+    autoComment(comment, { force: true, autoSend, root });
+  } finally {
+    aiCommentInFlight = false;
+  }
+}
+
+// Cleanup function
+function resetAiState() {
   aiCommentInFlight = false;
 }

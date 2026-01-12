@@ -1,5 +1,7 @@
 import { DEFAULT_SETTINGS, loadSettings, saveSettings } from "./storage.js";
-import { bindPasswordToggle, setStatus } from "./ui.js";
+import { bindPasswordToggle, setStatus, toggleLoading } from "./ui.js";
+import { validateApiKey, validateRating, validateComment } from "../shared/validation.js";
+import { ValidationError, getUserFriendlyMessage } from "../shared/errors.js";
 
 const ratingEl = document.getElementById("rating");
 const commentEl = document.getElementById("comment");
@@ -44,43 +46,98 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindPasswordToggle(keyEl, toggleKeyBtn);
 
   ratingEl.addEventListener("change", async () => {
-    await saveSettings(getCurrentSettings());
-    setStatus(statusEl, "Saved rating", "ok");
+    try {
+      const settings = getCurrentSettings();
+      validateRating(settings.rating);
+      const success = await saveSettings(settings);
+      if (success) {
+        setStatus(statusEl, "Saved rating", "ok");
+      } else {
+        setStatus(statusEl, "Failed to save rating", "error");
+      }
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        setStatus(statusEl, error.message, "error");
+      }
+    }
   });
 
   commentEl.addEventListener("input", async () => {
-    await saveSettings(getCurrentSettings());
-    setStatus(statusEl, "Saved comment", "ok");
+    const settings = getCurrentSettings();
+    await saveSettings(settings);
   });
 
   saveBtn.addEventListener("click", async () => {
-    await saveSettings(getCurrentSettings());
-    setStatus(statusEl, "Saved Gemini settings", "ok");
+    try {
+      toggleLoading(saveBtn, true);
+      const settings = getCurrentSettings();
+
+      // Validate API key if provided
+      if (settings.geminiApiKey) {
+        validateApiKey(settings.geminiApiKey);
+      }
+
+      const success = await saveSettings(settings);
+      if (success) {
+        setStatus(statusEl, "Saved Gemini settings", "ok");
+      } else {
+        setStatus(statusEl, "Failed to save settings", "error");
+      }
+    } catch (error) {
+      const message = getUserFriendlyMessage(error);
+      setStatus(statusEl, message, "error");
+    } finally {
+      toggleLoading(saveBtn, false);
+    }
   });
 
   gradeBtn.addEventListener("click", async () => {
-    setStatus(statusEl, "Sending auto grade...");
-    const { rating } = getCurrentSettings();
-    const response = await sendPopupAction("AUTO_GRADE", { rating });
-    if (response.status === "ok") {
-      setStatus(statusEl, "Auto grade sent", "ok");
-      return;
+    try {
+      toggleLoading(gradeBtn, true);
+      gradeBtn.disabled = true;
+
+      setStatus(statusEl, "Sending auto grade...");
+      const { rating } = getCurrentSettings();
+
+      validateRating(rating);
+
+      const response = await sendPopupAction("AUTO_GRADE", { rating });
+      if (response.status === "ok") {
+        setStatus(statusEl, "Auto grade sent", "ok");
+        return;
+      }
+      setStatus(statusEl, response.error || "Auto grade failed", "error");
+    } catch (error) {
+      const message = getUserFriendlyMessage(error);
+      setStatus(statusEl, message, "error");
+    } finally {
+      toggleLoading(gradeBtn, false);
+      gradeBtn.disabled = false;
     }
-    setStatus(statusEl, response.error || "Auto grade failed", "error");
   });
 
   commentBtn.addEventListener("click", async () => {
-    const { comment } = getCurrentSettings();
-    if (!comment.trim()) {
-      setStatus(statusEl, "Comment is empty", "error");
-      return;
+    try {
+      toggleLoading(commentBtn, true);
+      commentBtn.disabled = true;
+
+      const { comment } = getCurrentSettings();
+
+      validateComment(comment);
+
+      setStatus(statusEl, "Sending auto comment...");
+      const response = await sendPopupAction("AUTO_COMMENT", { comment });
+      if (response.status === "ok") {
+        setStatus(statusEl, "Auto comment sent", "ok");
+        return;
+      }
+      setStatus(statusEl, response.error || "Auto comment failed", "error");
+    } catch (error) {
+      const message = getUserFriendlyMessage(error);
+      setStatus(statusEl, message, "error");
+    } finally {
+      toggleLoading(commentBtn, false);
+      commentBtn.disabled = false;
     }
-    setStatus(statusEl, "Sending auto comment...");
-    const response = await sendPopupAction("AUTO_COMMENT", { comment });
-    if (response.status === "ok") {
-      setStatus(statusEl, "Auto comment sent", "ok");
-      return;
-    }
-    setStatus(statusEl, response.error || "Auto comment failed", "error");
   });
 });
