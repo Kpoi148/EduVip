@@ -60,11 +60,17 @@ function extractGeminiError(payload, fallback) {
 }
 
 function shouldTryNextModel(status, errorMessage) {
-  if (status === 404) {
+  if (status === 404 || status === 429) {
     return true;
   }
   const text = (errorMessage || "").toLowerCase();
-  return text.includes("not found") || text.includes("not supported");
+  return (
+    text.includes("not found") ||
+    text.includes("not supported") ||
+    text.includes("quota") ||
+    text.includes("limit") ||
+    text.includes("instruction is not enabled")
+  );
 }
 
 function buildModelList(requestedModel) {

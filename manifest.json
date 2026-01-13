@@ -37,6 +37,7 @@
         "src/content/dom.js",
         "src/content/rating.js",
         "src/content/comment.js",
+        "src/content/ui.js",
         "src/content/ai.js",
         "src/content/handlers.js",
         "src/content/index.js"

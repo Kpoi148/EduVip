@@ -51,25 +51,43 @@ async function autoCommentFromQuestion(options = {}) {
   try {
     const question = extractQuestionText();
     if (!question) {
-      console.log("Không tìm thấy nội dung câu hỏi");
+      if (window.EduVipToast) {
+        window.EduVipToast.show("Không tìm thấy nội dung câu hỏi", "warning");
+      } else {
+        console.warn("Không tìm thấy nội dung câu hỏi");
+      }
       return;
     }
 
     const response = await requestAiGenerate(question);
     if (!response || response.status !== "ok") {
-      console.log("AI generate failed:", response?.error || "Unknown error");
+      const errorMsg = response?.error || "Unknown error";
+      console.log("AI generate failed:", errorMsg);
+      if (window.EduVipToast) {
+        window.EduVipToast.show(`Lỗi AI: ${errorMsg}`, "error");
+      } else {
+        console.error(`Lỗi AI: ${errorMsg}`);
+      }
       return;
     }
 
     const comment = (response.text || "").trim();
     if (!comment) {
-      console.log("AI trả về comment trống");
+      if (window.EduVipToast) {
+        window.EduVipToast.show("AI trả về comment trống", "warning");
+      } else {
+        console.warn("AI trả về comment trống");
+      }
       return;
     }
 
     const hasField = await waitForCommentField(root);
     if (!hasField) {
-      console.log("Không tìm thấy ô comment để điền");
+      if (window.EduVipToast) {
+        window.EduVipToast.show("Không tìm thấy ô comment để điền", "warning");
+      } else {
+        console.warn("Không tìm thấy ô comment để điền");
+      }
       return;
     }
 

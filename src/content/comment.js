@@ -236,19 +236,31 @@ function autoComment(comment = DEFAULT_COMMENT, options = {}) {
     document.body ||
     document.documentElement;
   if (!root) {
-    console.log("Không tìm thấy bảng chấm điểm để comment");
+    if (window.EduVipToast) {
+      window.EduVipToast.show("Không tìm thấy bảng chấm điểm để comment", "warning");
+    } else {
+      console.warn("Không tìm thấy bảng chấm điểm để comment");
+    }
     return;
   }
 
   const fields = collectCommentFields(root);
   if (fields.length === 0) {
-    console.log("Không tìm thấy ô comment");
+    if (window.EduVipToast) {
+      window.EduVipToast.show("Không tìm thấy ô comment", "warning");
+    } else {
+      console.warn("Không tìm thấy ô comment");
+    }
     return;
   }
 
   const text = (comment || "").trim();
   if (!text) {
-    console.log("Comment trống, bỏ qua");
+    if (window.EduVipToast) {
+      window.EduVipToast.show("Comment trống, bỏ qua", "info");
+    } else {
+      console.info("Comment trống, bỏ qua");
+    }
     return;
   }
 
@@ -260,19 +272,35 @@ function autoComment(comment = DEFAULT_COMMENT, options = {}) {
   });
 
   if (filledCount === 0 && !force) {
-    console.log("Không có ô comment mới để điền");
+    if (window.EduVipToast) {
+      window.EduVipToast.show("Không có ô comment mới để điền", "info");
+    } else {
+      console.info("Không có ô comment mới để điền");
+    }
     return;
   }
 
-  console.log("Đã điền comment");
+  if (window.EduVipToast) {
+    window.EduVipToast.show("Đã điền comment thành công", "success");
+  } else {
+    console.log("Đã điền comment thành công");
+  }
 
   if (autoSend) {
     const sendBtn = findSendCommentButton(root);
     if (sendBtn) {
       sendBtn.click();
-      console.log("Đã bấm nút gửi comment");
+      if (window.EduVipToast) {
+        window.EduVipToast.show("Đã gửi comment", "success");
+      } else {
+        console.log("Đã gửi comment");
+      }
     } else {
-      console.log("Không tìm thấy nút gửi comment");
+      if (window.EduVipToast) {
+        window.EduVipToast.show("Không tìm thấy nút gửi comment", "warning");
+      } else {
+        console.warn("Không tìm thấy nút gửi comment");
+      }
     }
   }
 }
