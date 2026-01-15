@@ -3,7 +3,7 @@ export const STORAGE_KEY = "eduvip_settings";
 export const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash";
 export const GEMINI_MAX_OUTPUT_TOKENS = 3000;
 export const GEMINI_TEMPERATURE = 0.6;
-export const GEMINI_REQUEST_TIMEOUT_MS = 12000;
+export const GEMINI_REQUEST_TIMEOUT_MS = 60000;
 export const GEMINI_MODEL_KEY = "geminiPreferredModel";
 export const GEMINI_FALLBACK_MODELS = [
   "gemini-1.5-flash",
